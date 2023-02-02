@@ -23,3 +23,6 @@
 6. Démarrer le serveur de développement
    - Exécuter la commande `php artisan serve` pour démarrer le serveur de développement.
    - Ouvrir un navigateur et accéder à l'URL `http://localhost:8000` pour vérifier que le projet est en cours d'exécution.
+
+## Erreur possible
+Si le serveur n'arrive pas a se lancer donner les droits d'écriture au dossier storage avec la commande `sudo chmod -R 777 storage` puis relancer le serveur.
