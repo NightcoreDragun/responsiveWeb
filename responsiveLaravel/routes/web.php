@@ -21,3 +21,4 @@ Route::get('/', function () {
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 Route::get('/post', [PostController::class, 'index'])->name('post');
+Route::post('/post', [PostController::class, 'submit'])->name('post.submit');
