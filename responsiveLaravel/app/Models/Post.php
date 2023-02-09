@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Post extends Model
 {
- /**
+    /**
      * The table associated with the model.
      *
      * @var string
@@ -30,4 +30,5 @@ class Post extends Model
     public function media()
     {
         return $this->hasMany(Media::class);
-    }}
+    }
+}

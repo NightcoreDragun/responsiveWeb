@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 
 class PostController extends Controller
 {
@@ -24,38 +25,52 @@ class PostController extends Controller
             return redirect()->back()->withErrors(['FileError' => 'File validation failed.']);
         }
 
-        $post = $this->createPost($request);
-        $this->storeFiles($request, $post);
+        DB::beginTransaction();
 
-        return redirect()->back()->with('success', 'File uploaded successfully.');
+        try {
+            $post = $this->createPost($request);
+            $this->storeFiles($request, $post);
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Post and file uploaded successfully.');
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            return redirect()->back()->withErrors(['error' => 'Could not save post and file.']);
+        }
     }
 
     private function validateFileUpload(Request $request)
     {
         $validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/tiff'];
 
-        if (!$request->file('file')->isValid()) {
-            return false;
-        }
-
         $files = $request->file('file');
         $totalSize = 0;
 
         foreach ($files as $file) {
-            $totalSize += $file->getSize();
-            if (!in_array($file->getMimeType(), $validImageMimeTypes)) {
+            if (!$file->isValid()) {
                 return false;
             }
+
+            $totalSize += $file->getSize();
+
+
             if ($file->getSize() > 3000000) {
                 return false;
             }
-            if ($totalSize > 70000000) {
+            if (!in_array($file->getMimeType(), $validImageMimeTypes)) {
                 return false;
             }
         }
 
+        if ($totalSize > 70000000) {
+            return false;
+        }
+
         return true;
     }
+
 
     private function createPost(Request $request)
     {
@@ -70,10 +85,9 @@ class PostController extends Controller
     {
         foreach ($request->file('file') as $file) {
             $fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('public', $fileName);
-
+            $file->storeAs('public', $fileName);
             $media = new Media();
-            $media->nomFichierMedia = $path;
+            $media->nomFichierMedia = $fileName;
             $media->dateDeCreation = now();
             $media->typeMedia = $file->getClientMimeType();
             $media->post()->associate($post);
