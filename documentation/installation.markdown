@@ -1,7 +1,7 @@
 ## Étapes pour configurer un projet Laravel 9 existant sur un nouvel ordinateur
 
 1. Installer Node.js et NPM (Node Package Manager)
-   - Télécharger et installer Node.js à partir de https://nodejs.org/en/download/
+   - Télécharger et installer Node.js/Npm à partir de https://nodejs.org/en/download/. Faudra prendre les derneire version si possible
    - Vérifier l'installation en exécutant `node -v` et `npm -v` dans le terminal.
 
 2. Installer Composer
