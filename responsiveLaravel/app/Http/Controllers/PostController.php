@@ -7,6 +7,7 @@ use App\Models\Media;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
@@ -17,25 +18,28 @@ class PostController extends Controller
 
     public function submit(Request $request)
     {
-        if (!$request->hasFile('file')) {
-            return redirect()->back()->withErrors(['FileError' => 'No file provided.']);
-        }
-
-        if (!$this->validateFileUpload($request)) {
-            return redirect()->back()->withErrors(['FileError' => 'File validation failed.']);
-        }
-
         DB::beginTransaction();
 
         try {
             $post = $this->createPost($request);
-            $this->storeFiles($request, $post);
+
+            if ($request->hasFile('file')) {
+                if (!$this->validateFileUpload($request)) {
+                    DB::rollback();
+                    return redirect()->back()->withErrors(['FileError' => 'File validation failed.']);
+                }
+                $this->storeFiles($request, $post);
+            }
 
             DB::commit();
 
             return redirect()->back()->with('success', 'Post and file uploaded successfully.');
         } catch (\Exception $e) {
             DB::rollback();
+
+            if (isset($post)) {
+                $post->delete();
+            }
 
             return redirect()->back()->withErrors(['error' => 'Could not save post and file.']);
         }
@@ -55,7 +59,6 @@ class PostController extends Controller
 
             $totalSize += $file->getSize();
 
-
             if ($file->getSize() > 3000000) {
                 return false;
             }
@@ -71,21 +74,27 @@ class PostController extends Controller
         return true;
     }
 
-
     private function createPost(Request $request)
     {
-        return Post::create([
-            'commentaire' => $request->input('message'),
-            'dateDeCreation' => now(),
-            'dateDeModification' => now()
-        ]);
+        $post = new Post();
+        $post->commentaire = $request->input('message');
+        $post->dateDeCreation = now();
+        $post->dateDeModification = now();
+        $post->save();
+
+        return $post;
     }
 
     private function storeFiles(Request $request, Post $post)
     {
         foreach ($request->file('file') as $file) {
             $fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->storeAs('public', $fileName);
+            $path = $file->storeAs('public', $fileName);
+            if (!$path) {
+                $post->delete();
+                return redirect()->back()->withErrors(['error' => 'Could not save file.']);
+            }
+
             $media = new Media();
             $media->nomFichierMedia = $fileName;
             $media->dateDeCreation = now();
