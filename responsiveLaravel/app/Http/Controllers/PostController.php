@@ -18,32 +18,42 @@ class PostController extends Controller
 
     public function submit(Request $request)
     {
+        // Begin a database transaction
         DB::beginTransaction();
 
         try {
+            // Create the post record in the database
             $post = $this->createPost($request);
+
+            // If media files were uploaded with the form, validate and store them
 
             if ($request->hasFile('file')) {
                 if (!$this->validateFileUpload($request)) {
+                    // If file validation failed, rollback the transaction and redirect back to the form with an error message
                     DB::rollback();
                     return redirect()->back()->withErrors(['FileError' => 'File validation failed.']);
                 }
                 $this->storeFiles($request, $post);
             }
 
-            DB::commit();
 
+            // If everything succeeded, commit the transaction and redirect back to the form with a success message
+            DB::commit();
             return redirect()->back()->with('success', 'Post and file uploaded successfully.');
+
         } catch (\Exception $e) {
+            // If an exception was thrown during the transaction, rollback the transaction and delete the post record if it was created
             DB::rollback();
 
             if (isset($post)) {
                 $post->delete();
             }
 
+            // Redirect back to the form with an error message
             return redirect()->back()->withErrors(['error' => 'Could not save post and file.']);
         }
     }
+
 
     private function validateFileUpload(Request $request)
     {
