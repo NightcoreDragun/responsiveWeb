@@ -23,6 +23,9 @@ class PostController extends Controller
 
         try {
             // Create the post record in the database
+            if (!$request->has('message')) {
+                return redirect()->back()->withErrors(['error' => 'No message was provided.']);
+            }
             $post = $this->createPost($request);
 
             // If media files were uploaded with the form, validate and store them
@@ -57,7 +60,9 @@ class PostController extends Controller
 
     private function validateFileUpload(Request $request)
     {
-        $validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/tiff'];
+        $maxFileSize = 3000000;
+        $totalMaxSize = 70000000;
+        $validMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
 
         $files = $request->file('file');
         $totalSize = 0;
@@ -69,15 +74,15 @@ class PostController extends Controller
 
             $totalSize += $file->getSize();
 
-            if ($file->getSize() > 3000000) {
+            if ($file->getSize() > maxFileSize) {
                 return false;
             }
-            if (!in_array($file->getMimeType(), $validImageMimeTypes)) {
+            if (!in_array($file->getMimeType(), $validMimeTypes)) {
                 return false;
             }
         }
 
-        if ($totalSize > 70000000) {
+        if ($totalSize > totalMaxSize) {
             return false;
         }
 
