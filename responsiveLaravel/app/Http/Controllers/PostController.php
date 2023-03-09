@@ -74,7 +74,7 @@ class PostController extends Controller
 
             $totalSize += $file->getSize();
 
-            if ($file->getSize() > maxFileSize) {
+            if ($file->getSize() > $maxFileSize) {
                 return false;
             }
             if (!in_array($file->getMimeType(), $validMimeTypes)) {
@@ -82,7 +82,7 @@ class PostController extends Controller
             }
         }
 
-        if ($totalSize > totalMaxSize) {
+        if ($totalSize > $totalMaxSize) {
             return false;
         }
 

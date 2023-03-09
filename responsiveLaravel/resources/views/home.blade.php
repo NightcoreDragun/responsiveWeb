@@ -15,7 +15,13 @@
         <h3>{{ $post->commentaire }}</h3>
         @if(count($post->media) > 0)
             @foreach($post->media as $media)
-            <img src="{{ asset('storage/' . $media->nomFichierMedia) }}" alt="{{ $media->nomFichierMedia }}">
+                @if($media->typeMedia == 'video/mp4')
+                <video controls autoplay loop width="640" height="360">
+                    <source src="{{ asset('storage/' . $media->nomFichierMedia) }}" type="video/mp4">
+                </video>
+                @else
+                    <img src="{{ asset('storage/' . $media->nomFichierMedia) }}" alt="{{ $media->nomFichierMedia }}">
+                @endif
             @endforeach
         @endif
     @endforeach
