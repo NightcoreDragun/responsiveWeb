@@ -10,7 +10,7 @@
             </div>
             <div class="form-group">
                 <label for="file" class="block font-medium text-gray-700 mb-2">Upload file:</label>
-                <input type="file" class="form-control-file" id="file" name="file[]" accept=".png, .jpg, .gif, .mp4" multiple>
+                <input type="file" class="form-control-file" id="file" name="file[]" accept=".png, .jpg, .mp3, .mp4" multiple>
             </div>
             <button type="submit"
                 class="btn bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600">Publish</button>

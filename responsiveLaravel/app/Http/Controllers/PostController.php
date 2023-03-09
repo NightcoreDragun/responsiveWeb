@@ -23,13 +23,9 @@ class PostController extends Controller
 
         try {
             // Create the post record in the database
-            if (!$request->has('message')) {
-                return redirect()->back()->withErrors(['error' => 'No message was provided.']);
-            }
             $post = $this->createPost($request);
 
             // If media files were uploaded with the form, validate and store them
-
             if ($request->hasFile('file')) {
                 if (!$this->validateFileUpload($request)) {
                     // If file validation failed, rollback the transaction and redirect back to the form with an error message
@@ -53,7 +49,7 @@ class PostController extends Controller
             }
 
             // Redirect back to the form with an error message
-            return redirect()->back()->withErrors(['error' => 'Could not save post and file.']);
+            return redirect()->back()->withErrors(['error' => 'Could not save post and file. Please be sure to provide a message']);
         }
     }
 
@@ -62,7 +58,7 @@ class PostController extends Controller
     {
         $maxFileSize = 3000000;
         $totalMaxSize = 70000000;
-        $validMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
+        $validMimeTypes = ['image/jpeg', 'image/png', 'video/mp4', 'audio/mpeg'];
 
         $files = $request->file('file');
         $totalSize = 0;
@@ -102,6 +98,8 @@ class PostController extends Controller
 
     private function storeFiles(Request $request, Post $post)
     {
+        $mediaData = [];
+
         foreach ($request->file('file') as $file) {
             $fileName = uniqid() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('public', $fileName);
@@ -110,12 +108,55 @@ class PostController extends Controller
                 return redirect()->back()->withErrors(['error' => 'Could not save file.']);
             }
 
-            $media = new Media();
-            $media->nomFichierMedia = $fileName;
-            $media->dateDeCreation = now();
-            $media->typeMedia = $file->getClientMimeType();
-            $media->post()->associate($post);
-            $media->save();
+            $mediaData[] = [
+                'nomFichierMedia' => $fileName,
+                'dateDeCreation' => now(),
+                'typeMedia' => $file->getClientMimeType(),
+                'post_id' => $post->id,
+            ];
+        }
+
+        Media::insert($mediaData);
+    }
+
+    public function destroy(Post $post)
+    {
+        // Begin a database transaction
+        DB::beginTransaction();
+
+        try {
+            // If the post has any media files, delete them from the filesystem and the database
+            if ($post->media->count()) {
+                $this->deleteFiles($post);
+            }
+
+            // Delete the post record from the database
+            $post->delete();
+
+            // If everything succeeded, commit the transaction
+            DB::commit();
+
+            // Redirect back to the home page with a success message
+            return redirect()->back()->with('success', 'Post and file deleted successfully.');
+
+        } catch (\Exception $e) {
+            // If an exception was thrown during the transaction, rollback the transaction
+            DB::rollback();
+
+            // Redirect back to the home page with an error message
+            return redirect()->back()->withErrors(['error' => 'Could not delete post and file.']);
         }
     }
+
+    private function deleteFiles(Post $post)
+    {
+        $media = $post->media;
+        foreach ($media as $file) {
+            Storage::delete('public/' . $file->nomFichierMedia);
+            $file->delete();
+        }
+    }
+
+
+
 }
