@@ -11,11 +11,13 @@ use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
+    // Show the post form
     public function index()
     {
         return view('forms.post');
     }
 
+    // Handle the post form submission
     public function submit(Request $request)
     {
         // Begin a database transaction
@@ -35,11 +37,9 @@ class PostController extends Controller
                 $this->storeFiles($request, $post);
             }
 
-
             // If everything succeeded, commit the transaction and redirect back to the form with a success message
             DB::commit();
             return redirect()->back()->with('success', 'Post and file uploaded successfully.');
-
         } catch (\Exception $e) {
             // If an exception was thrown during the transaction, rollback the transaction and delete the post record if it was created
             DB::rollback();
@@ -53,7 +53,7 @@ class PostController extends Controller
         }
     }
 
-
+    // Validate the uploaded files
     private function validateFileUpload(Request $request)
     {
         $maxFileSize = 3000000;
@@ -85,6 +85,7 @@ class PostController extends Controller
         return true;
     }
 
+    // Create a new post record in the database
     private function createPost(Request $request)
     {
         $post = new Post();
@@ -96,18 +97,29 @@ class PostController extends Controller
         return $post;
     }
 
+    /**
+     * Store uploaded files for a post.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Post  $post
+     * @return void
+     */
     private function storeFiles(Request $request, Post $post)
     {
         $mediaData = [];
 
+        // Loop through each uploaded file and save it to the filesystem and database
         foreach ($request->file('file') as $file) {
             $fileName = uniqid() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('public', $fileName);
+
+            // If file could not be saved, delete the post and return an error message
             if (!$path) {
                 $post->delete();
                 return redirect()->back()->withErrors(['error' => 'Could not save file.']);
             }
 
+            // Save file information to mediaData array for later insertion to database
             $mediaData[] = [
                 'nomFichierMedia' => $fileName,
                 'dateDeCreation' => now(),
@@ -116,9 +128,16 @@ class PostController extends Controller
             ];
         }
 
+        // Insert mediaData array to the database
         Media::insert($mediaData);
     }
 
+    /**
+     * Delete a post and its media files.
+     *
+     * @param  \App\Models\Post  $post
+     * @return \Illuminate\Http\Response
+     */
     public function destroy(Post $post)
     {
         // Begin a database transaction
@@ -133,30 +152,30 @@ class PostController extends Controller
             // Delete the post record from the database
             $post->delete();
 
-            // If everything succeeded, commit the transaction
+            // If everything succeeded, commit the transaction and redirect with success message
             DB::commit();
-
-            // Redirect back to the home page with a success message
             return redirect()->back()->with('success', 'Post and file deleted successfully.');
-
         } catch (\Exception $e) {
-            // If an exception was thrown during the transaction, rollback the transaction
+            // If an exception was thrown during the transaction, rollback the transaction and redirect with error message
             DB::rollback();
-
-            // Redirect back to the home page with an error message
             return redirect()->back()->withErrors(['error' => 'Could not delete post and file.']);
         }
     }
 
+    /**
+     * Delete media files for a post.
+     *
+     * @param  \App\Models\Post  $post
+     * @return void
+     */
     private function deleteFiles(Post $post)
     {
         $media = $post->media;
+
+        // Loop through each media file and delete it from the filesystem and the database
         foreach ($media as $file) {
             Storage::delete('public/' . $file->nomFichierMedia);
             $file->delete();
         }
     }
-
-
-
 }
